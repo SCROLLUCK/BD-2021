@@ -1,128 +1,5 @@
-# Comentários mais uteis e com menor avaliação
-# SELECT *
-# FROM reviews 
-# WHERE id IN (
-#   SELECT reviews.id 
-#   FROM products,reviews 
-#   WHERE products.asin = reviews.asin
-#   AND products.asin = '1579550088'
-# )
-# ORDER BY reviews.rating, reviews.helpful DESC
-#  LIMIT 5
-
-# Comentários mais úteis e com mair avaliação 
-# SELECT *
-# FROM reviews 
-# WHERE id IN (
-#   SELECT reviews.id 
-#   FROM products,reviews 
-#   WHERE products.asin = reviews.asin
-#   AND products.asin = '1579550088'    
-# )
-# ORDER BY reviews.rating DESC, reviews.helpful DESC
-#  LIMIT 5
-
-# Dado um produto, listar os produtos similares com maiores vendas do que ele
-# SELECT * 
-# FROM products
-# WHERE asin IN(
-#   (SELECT similars.asin_similar as asin FROM similars WHERE similars.asin = '0827229534')
-# 		UNION 
-# 	(SELECT similars.asin as asin FROM similars WHERE similars.asin_similar = '0827229534'))
-# ORDER BY salesrank DESC
-
-# Listar os 10 produtos líderes de venda em cada grupo de produtos
-# SELECT *
-# FROM products
-# WHERE products._group != 'Book'
-# ORDER BY salesrank DESC
-# LIMIT 10
-
-# Listar os 10 produtos com a maior média de avaliações úteis positivas por produto
-# SELECT products.*
-# FROM
-#   (SELECT products.asin as asii, avg(reviews.helpful) as "avg", count(reviews.helpful) as total
-#     FROM products, reviews
-#     WHERE products.asin = reviews.asin
-#     GROUP BY (products.asin)
-#   ) tt JOIN products ON products.asin = tt.asii
-# ORDER BY "avg" DESC
-# LIMIT 10
-
-# SELECT *
-#   FROM 
-#   (SELECT reviews.cutomer, products._group, count(reviews.asin) as _count
-#     FROM products, reviews
-#     WHERE products.asin = reviews.asin
-#    	GROUP BY (products._group,reviews.id)
-#    	ORDER BY _count DESC
-#   ) tt ORDER BY _count ASC
-
 import psycopg2
 import os
-
-
-class Product:
-
-    def __init__(self, id, asin, title, group, salesrank, similar, categories, reviews, discontinued):
-        self.id = int(id)
-        self.discontinued = discontinued
-        self.asin = asin
-        self.title = title
-        self.group = group
-        self.salesrank = int(salesrank)
-        self.similar = similar
-        self.categories = categories
-        self.reviews = reviews
-
-    def show_product(self):
-        
-        print(f"id:{self.id}-")
-        print(f"ASIN:{self.asin}-")
-        if(not self.discontinued):
-            print(f"title:{self.title}-")
-            print(f"group:{self.group}-")
-            print(f"salesrank:{self.salesrank}-")
-            print(f"similar:{self.similar}-")
-            print(f"categories:{self.categories}-")
-            print(f"reviews:{self.reviews}-")
-        else :
-            print("Product discontinued")
-
-    def get_id(self): return self.id
-    def get_asin(self): return self.asin
-    def get_discontinued(self): return self.discontinued
-    def get_title(self): return self.title
-    def get_group(self): return self.group
-    def get_salesrank(self): return self.salesrank
-    def get_similar(self): return self.similar
-    def get_categories(self): return self.categories
-    def get_reviews(self): return self.reviews
-
-class Review:
-
-    def __init__(self,asin,date,cutomer,rating,votes,helpful):
-        self.asin = asin
-        self.date = date
-        self.cutomer = cutomer
-        self.rating = rating
-        self.votes = votes
-        self.helpful = helpful
-
-    def show_review(self):
-        print(f" Date: -{self.date}-")
-        print(f" Cutomer: -{self.cutomer}-")
-        print(f" rating: -{self.rating}-")
-        print(f" Votes: -{self.votes}-")
-        print(f" Helpful: -{self.helpful}-")
-
-    def get_date(self): return self.date
-    def get_asin(self): return self.asin
-    def get_cutomer(self): return self.cutomer
-    def get_rating(self): return self.rating
-    def get_votes(self): return self.votes
-    def get_helpful(self): return self.helpful
-
 
 def connect():
     conn = None
@@ -136,22 +13,161 @@ def connect():
     except (Exception, psycopg2.DatabaseError) as error:
         print(error)
 
-
-def a():
+def a(product_asin):
     conn = connect()
+    print("\n (a) Dado produto, listar os 5 comentários mais úteis e com maior avaliação e os 5 comentários mais úteis e com menor avaliação")
+    print(f"  - Produto utilizado: {product_asin}")
+    print("  (id, date, asin, customer, rating, votes, helpful)\n")
     if conn is not None:
         try:
             cur = conn.cursor()
-            cur.execute(f"SELECT * FROM reviews WHERE id IN ( SELECT reviews.id FROM products,reviews WHERE products.asin = reviews.asin AND products.asin = '1579550088') ORDER BY reviews.rating, reviews.helpful DESC LIMIT 5")
-            print("The number of parts: ", cur.rowcount)
+            query = f"""
+            SELECT tt.*
+                FROM (
+                (SELECT reviews.*
+                FROM products,reviews 
+                WHERE products.asin = reviews.asin
+                AND products.asin = '{product_asin}'
+                ORDER BY reviews.rating DESC, reviews.helpful DESC
+                LIMIT 5)
+                    UNION ALL
+                (SELECT reviews.* 
+                FROM products,reviews 
+                WHERE products.asin = reviews.asin
+                AND products.asin = '{product_asin}'
+                ORDER BY reviews.rating, reviews.helpful DESC
+                LIMIT 5)
+                ) tt
+            """
+            cur.execute(query)
             rows = cur.fetchall()
             if rows is not None:
                 for row in rows:
-                    print(row)
-
+                    print(f"  {row}")
+            
             cur.close()
         except (Exception, psycopg2.DatabaseError) as error:
             print(error)
-        
+
+def b(product_asin):
+    conn = connect()
+    print("\n (b) Dado um produto, listar os produtos similares com maiores vendas do que ele")
+    print(f"   - Produto utilizado: {product_asin}")
+    print("  (id, asin, group, salesrank, title)\n")
+    if conn is not None:
+        try:
+            
+            cur = conn.cursor()
+            query = f"""
+            SELECT id, asin, _group, salesrank, title 
+            FROM products
+            WHERE asin IN ( SELECT resembling.asin_resembling as asin FROM resembling WHERE resembling.asin = '{product_asin}')
+            AND products.salesrank > (SELECT salesrank FROM products where products.asin = '{product_asin}')
+            ORDER BY salesrank DESC
+            """
+            cur.execute(query)
+            rows = cur.fetchall()
+            if rows is not None:
+                for row in rows:
+                    print(f"  {row}")
+            
+            cur.close()
+        except (Exception, psycopg2.DatabaseError) as error:
+            print(error)
+
+def d():
+    conn = connect()
+    print("\n (d) Listar os 10 produtos líderes de venda em cada grupo de produtos")
+    print("  (ranking, group, asin, salesrank, title)\n")
+    if conn is not None:
+        try:
+            cur = conn.cursor()
+            query = """
+            SELECT x.ranking, x._group, x.asin, x.salesrank, x.title
+            FROM 
+                (SELECT
+                ROW_NUMBER() OVER (PARTITION BY _group ORDER BY salesrank DESC) AS ranking,
+                t.*
+                FROM products t) x
+            WHERE x.ranking <= 10 AND x._group != '';
+            """
+            cur.execute(query)
+            rows = cur.fetchall()
+            if rows is not None:
+                for row in rows:
+                    print(f"  {row}")
+            
+            cur.close()
+        except (Exception, psycopg2.DatabaseError) as error:
+            print(error)
+
+def e():
+    conn = connect()
+    print("\n (e) Listar os 10 produtos com a maior média de avaliações úteis positivas por produto")
+    print("  (asin, avg_helpful, total reviews)\n")
+    if conn is not None:
+        try:
+            cur = conn.cursor()
+            query = """ 
+            SELECT tt.* 
+            FROM
+                (SELECT reviews.asin as asii, avg(reviews.helpful) as avg_helpful, count(reviews.asin) as total 
+                    FROM products, reviews
+                    WHERE reviews.asin = products.asin
+                    GROUP BY asii
+                    ORDER BY total DESC
+                ) tt
+            ORDER BY tt.avg_helpful DESC
+            LIMIT 10
+            """
+            cur.execute(query)
+            rows = cur.fetchall()
+            if rows is not None:
+                for row in rows:
+                    print(f"  {row}")
+            
+            cur.close()
+        except (Exception, psycopg2.DatabaseError) as error:
+            print(error)
+
+def g():
+    conn = connect()
+    print("\n (g) Listar os 10 clientes que mais fizeram comentários por grupo de produto")
+    print("  (ranking, group, customer, number of comments)\n")
+    if conn is not None:
+        try:
+            cur = conn.cursor()
+            query = """ 
+            SELECT * 
+            FROM 
+                (SELECT
+                ROW_NUMBER() OVER (PARTITION BY _group ORDER BY number_coments DESC) AS ranking,
+                t.*
+                FROM (
+                    SELECT tt._group, tt.customer, tt.number_coments
+                    FROM 
+                        (SELECT products._group, reviews.customer, count(reviews.customer) as number_coments
+                        FROM products, reviews 
+                        WHERE products.asin = reviews.asin 
+                        GROUP BY (products._group, reviews.customer)
+                        ) tt
+                    )t
+                ) x
+            WHERE x.ranking <= 10;
+            """
+            cur.execute(query)
+            rows = cur.fetchall()
+            if rows is not None:
+                for row in rows:
+                    print(f"  {row}")
+            
+            cur.close()
+        except (Exception, psycopg2.DatabaseError) as error:
+            print(error)
+
 if __name__ == '__main__':
-    a()
+    a('B000067DNF')
+    b('B00004VXDB')
+    d()
+    e()
+    g()

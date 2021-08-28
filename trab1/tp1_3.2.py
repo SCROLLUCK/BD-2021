@@ -10,8 +10,11 @@ all_resembling = []
 all_categories = []
 all_product_category = []
 all_customers = []
-# lista auxiliar para evitar repetições na lista all_categories
-categories_ids = []
+# discionarios auxiliares para evitar repetições
+all_products_disc = {}
+all_customers_disc = {}
+all_categories_disc = {}
+aux_resembling = []
 length = 0
 
 def connect():
@@ -71,7 +74,7 @@ def create_tables():
             asin CHAR(10) UNIQUE NOT NULL,
             title VARCHAR(500),
             _group VARCHAR(100),
-            salesrank INTEGER,
+            salesrank INTEGER NOT NULL DEFAULT 0,
             discontinued BOOLEAN NOT NULL
             )
             """,
@@ -114,7 +117,8 @@ def create_tables():
             rating INTEGER NOT NULL DEFAULT 0,
             votes INTEGER NOT NULL DEFAULT 0,
             helpful INTEGER NOT NULL DEFAULT 0,
-            FOREIGN KEY (asin) REFERENCES products (asin) ON UPDATE CASCADE ON DELETE CASCADE
+            FOREIGN KEY (asin) REFERENCES products (asin) ON UPDATE CASCADE ON DELETE CASCADE,
+            FOREIGN KEY (customer) REFERENCES customers (id) ON UPDATE CASCADE ON DELETE CASCADE
             )
             """,
         )
@@ -143,120 +147,105 @@ def populate_tables():
     
     if conn is not None:
 
-        print(" Cadastrando Clientes .. Tempo estimado: 5 minutos")
-        start = time.time()
-        cur = conn.cursor()
-        valid_insertions = 0
-        for c, customer in enumerate(all_customers):
-            try:
-                query = """INSERT INTO customers (id) VALUES (%s,)"""
-                cur.execute(query,customer)
-                conn.commit()
-                valid_insertions+=1
-            except (Exception, psycopg2.DatabaseError) as error:
-                conn.rollback()
-                print(customer)
-                print(error)
-                return
-            
-            progress_bar(c + 1, len(all_customers), prefix = 'Progresso:', suffix = f"Completo {c+1} de {len(all_customers)}", length = 40)
-                
-        cur.close()
-        done = time.time()
-        print(f" - {valid_insertions} Clientes cadastrados em: {str(datetime.timedelta(seconds=math.floor(done - start)))}")
         
-        # print(" - Cadastrando Produtos .. Tempo estimado: 1 minuto")
-        # start = time.time()
-        # try:
-        #     query = """INSERT INTO products (id,asin,title,_group,salesrank,discontinued) VALUES (%s,%s,%s,%s,%s,%s)"""
-        #     cur = conn.cursor()
-        #     cur.executemany(query,all_products)
-        #     conn.commit()
-        #     cur.close()
-        # except (Exception, psycopg2.DatabaseError) as error:
-        #     print(error)
-        #     return
+        print(" Cadastrando Produtos .. Tempo estimado: 0:01:00")
+        start = time.time()
+        try:
+            query = """INSERT INTO products (id,asin,title,_group,salesrank,discontinued) VALUES (%s,%s,%s,%s,%s,%s)"""
+            cur = conn.cursor()
+            cur.executemany(query,all_products)
+            conn.commit()
+            cur.close()
+        except (Exception, psycopg2.DatabaseError) as error:
+            print(error)
+            return
 
-        # done = time.time()
-        # print(f" - {len(all_products)} produtos cadastrados em: {str(datetime.timedelta(seconds=math.floor(done - start)))}")
+        done = time.time()
+        print(f" - {len(all_products)} produtos cadastrados em: {str(datetime.timedelta(seconds=math.floor(done - start)))}")
 
-        # print(" Cadastrando Categorias .. Tempo estimado: 2 minutos")
-        # start = time.time()
-        # cur = conn.cursor()
-        # valid_insertions = 0
-        # for j, category in enumerate(all_categories):
-        #     try:
-        #         query = """INSERT INTO categories (id,name, subcategory_of) VALUES (%s,%s,%s)"""
-        #         cur.execute(query,category)
-        #         conn.commit()
-        #         valid_insertions+=1
-        #     except (Exception, psycopg2.DatabaseError) as error:
-        #         conn.rollback()
-        #         print(error)
-        #         return
-            
-        #     progress_bar(j + 1, len(all_categories), prefix = 'Progresso:', suffix = f"Completo {j+1} de {len(all_categories)}", length = 40)
+        print(" Cadastrando Clientes .. Tempo estimado: 0:01:30")
+        start = time.time()
+        try:
+            query = """INSERT INTO customers (id) VALUES (%s)"""
+            cur = conn.cursor()
+            cur.executemany(query,all_customers)
+            conn.commit()
+            cur.close()
+        except (Exception, psycopg2.DatabaseError) as error:
+            print(error)
+            return
                 
-        # cur.close()
-        # done = time.time()
-        # print(f" - {valid_insertions} Categorias cadastradas em: {str(datetime.timedelta(seconds=math.floor(done - start)))}")
+        done = time.time()
+        print(f" - {len(all_customers)} Clientes cadastrados em: {str(datetime.timedelta(seconds=math.floor(done - start)))}")
 
-        # print(" - Cadastrando Categorias dos Produtos .. ")
-        # start = time.time()
-        # try:
-        #     query = """INSERT INTO product_category (product_asin,category_id) VALUES (%s,%s)"""
-        #     cur = conn.cursor()
-        #     cur.executemany(query,all_product_category)
-        #     conn.commit()
-        #     cur.close()
-        # except (Exception, psycopg2.DatabaseError) as error:
-        #     print(error)
-        #     return
+        print(" Cadastrando Reviews .. Tempo estimado: 0:15:00")
+        start = time.time()
+        try:
+            query = """INSERT INTO reviews (date,asin,customer,rating,votes,helpful) VALUES (%s,%s,%s,%s,%s,%s)"""
+            cur = conn.cursor()
+            cur.executemany(query,all_reviews)
+            conn.commit()
+            cur.close()
+        except (Exception, psycopg2.DatabaseError) as error:
+            print(error)
+            return
+        done = time.time()
+        print(f" - {len(all_reviews)} reviews cadastrados em: {str(datetime.timedelta(seconds=math.floor(done - start)))}")
 
-        # done = time.time()
-        # print(f" - {len(all_product_category)} Categorias de produtos cadastrados em: {str(datetime.timedelta(seconds=math.floor(done - start)))}")
+        print(" Cadastrando Categorias .. Tempo estimado: 0:00:03")
+        start = time.time()
+        valid_insertions = len(all_categories)
+        try:
+            query = """INSERT INTO categories (id,name, subcategory_of) VALUES (%s,%s,%s)"""
+            cur = conn.cursor()
+            cur.executemany(query,all_categories)
+            conn.commit()
+            cur.close()
+        except (Exception, psycopg2.DatabaseError) as error:
+            valid_insertions=0
+            print(error)
+            return
+        done = time.time()
+        print(f" - {valid_insertions} Categorias cadastradas em: {str(datetime.timedelta(seconds=math.floor(done - start)))}")
 
+        print(" Cadastrando Categorias dos Produtos .. 0:03:32")
+        start = time.time()
+        try:
+            query = """INSERT INTO product_category (product_asin,category_id) VALUES (%s,%s)"""
+            cur = conn.cursor()
+            cur.executemany(query,all_product_category)
+            conn.commit()
+            cur.close()
+        except (Exception, psycopg2.DatabaseError) as error:
+            print(error)
+            return
+        done = time.time()
+        print(f" - {len(all_product_category)} Categorias de produtos cadastrados em: {str(datetime.timedelta(seconds=math.floor(done - start)))}")
 
-        # print(" Cadastrando Reviews .. Tempo estimado: 15 minutos")
-        # start = time.time()
-        # try:
-        #     query = """INSERT INTO reviews (date,asin,customer,rating,votes,helpful) VALUES (%s,%s,%s,%s,%s,%s)"""
-        #     cur = conn.cursor()
-        #     cur.executemany(query,all_reviews)
-        #     conn.commit()
-        #     cur.close()
-        # except (Exception, psycopg2.DatabaseError) as error:
-        #     print(error)
-        #     return
-        # done = time.time()
-        # print(f" - {len(all_reviews)} reviews cadastrados em: {str(datetime.timedelta(seconds=math.floor(done - start)))}")
+        print(" Cadastrando Similaridade de Produtos .. Tempo estimado: 00:01:53")
+        start = time.time()
+        valid_insertions = len(all_resembling)
+        try:
+            query = """INSERT INTO resembling (asin,asin_resembling) VALUES (%s,%s)"""
+            cur = conn.cursor()
+            cur.executemany(query,all_resembling)
+            conn.commit()
+            cur.close()
+        except (psycopg2.DatabaseError) as error:
+            print(error)
+            valid_insertions=0
+            return
 
-        # print(" - Cadastrando Similaridade de Produtos .. Tempo estimado: 1h")
-        # start = time.time()
-        # cur = conn.cursor()
-        # valid_insertions = 0
-        # for i, similar in enumerate(all_resembling):
-        #     try:
-        #         query = """INSERT INTO resembling (asin,asin_resembling) VALUES (%s,%s)"""
-        #         cur.execute(query,(similar[0],similar[1]))
-        #         conn.commit()
-        #     except (psycopg2.DatabaseError) as error:
-        #         conn.rollback()
-
-        #     progress_bar(i + 1, len(all_resembling), prefix = 'Progresso:', suffix = f"Completo {i+1} de {len(all_resembling)}", length = 40)
-
-        # cur.close()
-        # done = time.time()
-        # print(f" - {len(valid_insertions)} Relações de Similaridade cadastradas em: {str(datetime.timedelta(seconds=math.floor(done - start)))}")
-
+        done = time.time()
+        print(f" - {valid_insertions} Relações de Similaridade cadastradas em: {str(datetime.timedelta(seconds=math.floor(done - start)))}")
 
         conn.close()    
 
 def read_file():
 
-    print("Verificando arquivo de entrada ..")
+    print(" Verificando arquivo de entrada ..")
     with open('amazon-meta.txt') as f:
-        print(" - Arquivo encontrado!\n Iniciando leitura .. Tempo estimado: 10 minutos")
+        print(" - Arquivo encontrado!\n Iniciando leitura .. Tempo estimado: 0:01:30")
         start = time.time()
         #pula cabeçalho do arquivo
         f.seek(80,0)
@@ -277,7 +266,7 @@ def read_file():
                 similars.pop(0)
                 # obtem similares
                 for similar in similars:
-                    all_resembling.append((asin,similar))
+                    aux_resembling.append((asin,similar))
                 
                 # obtem categorias
                 categories = product[product.find("categories: ")+12:product.find("reviews:")].strip("\n  ").split("\n")
@@ -288,7 +277,6 @@ def read_file():
                     #limpa linha e divide em categorias
                     category_line = category_line.strip("   |").split("|")
                     for c, category in enumerate(category_line):
-                        # adiciona categoria em uma lista de strings para facilitar a busca por categorias repetidas
                         name = ""
                         if not category.__contains__("[guitar]"):
                             category = category.split("[")
@@ -308,8 +296,10 @@ def read_file():
                         hierarchy_categories.append(category_id)
                         
                         # verifica se categoria atual ja foi inserida
-                        if category_id not in categories_ids:
-                            categories_ids.append(category_id)
+                        try:
+                            all_categories_disc[category_id]
+                        except KeyError:
+                            all_categories_disc[category_id] = category_id
                             if c > 0:
                                 all_categories.append((category_id,name,hierarchy_categories[c-1]))
                             else:
@@ -326,39 +316,56 @@ def read_file():
                         rating = review[review.find("rating: ")+8:review.find("  votes:")].strip(" ")
                         votes = review[review.find("votes: ")+7:review.find("  helpful:")].strip(" ")
                         helpful = review[review.find("helpful: ")+9:].strip(" ")
-                        # if customer not in all_customers:
-                        all_customers.append(customer)
+                        try:
+                            all_customers_disc[customer]
+                        except KeyError:
+                            all_customers_disc[customer] = customer
+                            all_customers.append((customer,))
                         all_reviews.append((date,asin,customer,int(rating),int(votes),int(helpful)))
                 
                 all_products.append((int(id),asin,title,group,int(salesrank),False))
+                all_products_disc[asin] = asin
                 
             else:
                 discontinued_id = product[product.find(":   ")+4:product.find("ASIN:")].strip("\n ")
                 discontinued_asin = product[product.find("ASIN: ")+6:product.find("\n ")]
-                all_products.append((discontinued_id,discontinued_asin,"","",0,True))
+                all_products.append((discontinued_id,discontinued_asin,"",None,0,True))
+                all_products_disc[discontinued_asin] = discontinued_asin
                 
-            progress_bar(i + 1, length, prefix = 'Progresso:', suffix = f"Completo {i+1} de 548552", length = 40)
+            progress_bar(i + 1, 548552, prefix = 'Progresso:', suffix = f"Completo {i+1} de 548552", length = 40)
 
         done = time.time()
-        print(f" Leitura do arquivo finalizada! em {str(datetime.timedelta(seconds=math.floor(done - start)))} \n Informações encontradas:")
+        print(f" Leitura do arquivo finalizada em {str(datetime.timedelta(seconds=math.floor(done - start)))} \n Informações encontradas:")
         print(f" - {len(all_products)} Produtos")
         print(f" - {len(all_reviews)} Reviews")
         print(f" - {len(all_categories)} Categorias")
-        print(f" - {len(all_resembling)} Produtos Similares")
+        print(f" - {len(aux_resembling)} Produtos Similares")
         print(f" - {len(all_product_category)} Categorias de Produtos")
         print(f" - {len(all_customers)} Clientes")
 
+        print(" Removendo similaridade de produtos não presentes no arquivo .. Tempo estimado: 0:00:23")
+        start = time.time()
+        remove_invalid_asins=0
+        for ii, similar in enumerate(aux_resembling):   
+            try:
+                all_products_disc[similar[1]]
+                all_resembling.append(similar)
+            except KeyError:
+                remove_invalid_asins+=1
+            progress_bar(ii + 1, len(aux_resembling), prefix = 'Progresso:', suffix = f"Completo  (lidos:{ii}, removidos: {remove_invalid_asins})", length = 40)
+       
+        done = time.time()
+        print(f" - {len(all_resembling)} Similaridades restantes")
+        print(f" - {remove_invalid_asins} Similaridades inválidas removidas em: {str(datetime.timedelta(seconds=math.floor(done - start)))}")
 
 if __name__ == '__main__':
     os.system("service postgresql start")
-    
-    items = list(range(0, 548551))
-    length = len(items)
+    print("\n (OBS: Olá caro usuário! É possivel acessar o banco de dados deste container direto da sua máquina.)\n")
+    print(" Os dados para o acesso:\n  host: localhost\n  port: 5432\n  user: root \n  password: password\n  database: root \n")
+    start = time.time()
     read_file()
-
     drop_tables()
     create_tables()
-    
-    items = list(range(0, 548551))
-    length = len(items)
     populate_tables()
+    done = time.time()
+    print(f" Tudo Pronto para testar o tp1_3.3! Tempo total: {str(datetime.timedelta(seconds=math.floor(done - start)))}")
