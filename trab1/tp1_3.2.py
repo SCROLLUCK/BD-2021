@@ -80,9 +80,9 @@ def create_tables():
             """,
             """
             CREATE TABLE categories (
-            id INTEGER PRIMARY KEY,
+            id INTEGER PRIMARY KEY NOT NULL,
             name VARCHAR(500),
-            subcategory_of INTEGER,
+            subcategory_of INTEGER NOT NULL,
             FOREIGN KEY (subcategory_of) REFERENCES categories (id) ON UPDATE CASCADE ON DELETE CASCADE
             )
             """,
@@ -96,8 +96,8 @@ def create_tables():
             """,
             """
             CREATE TABLE resembling (
-            asin CHAR(10),
-            asin_resembling CHAR(10),
+            asin CHAR(10) NOT NULL,
+            asin_resembling CHAR(10) NOT NULL,
             PRIMARY KEY (asin,asin_resembling),
             FOREIGN KEY (asin) REFERENCES products (asin) ON UPDATE CASCADE ON DELETE CASCADE,
             FOREIGN KEY (asin_resembling) REFERENCES products (asin) ON UPDATE CASCADE ON DELETE CASCADE

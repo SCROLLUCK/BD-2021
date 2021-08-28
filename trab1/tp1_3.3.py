@@ -89,7 +89,7 @@ def d():
                 ROW_NUMBER() OVER (PARTITION BY _group ORDER BY salesrank DESC) AS ranking,
                 t.*
                 FROM products t) x
-            WHERE x.ranking <= 10 AND x._group != '';
+            WHERE x.ranking <= 10 AND x._group IS NOT null;
             """
             cur.execute(query)
             rows = cur.fetchall()
