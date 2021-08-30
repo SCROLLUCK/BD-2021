@@ -13,7 +13,14 @@ salesrank = 0
 similars = ""
 discontinued = False
 
+all_products = []
+all_reviews = []
 all_resembling = []
+all_categories = []
+all_product_category = []
+all_customers = []
+
+inserted_=0
 
 def connect():
     try:
@@ -68,6 +75,108 @@ def drop_tables():
         conn.close()
         print(" - Bando de dados Limpo!")
 
+def populate_tables():
+    
+    global all_products
+    global all_reviews
+    global all_resembling
+    global all_categories
+    global all_product_category
+    global all_customers
+    conn = connect()
+    
+    if conn is not None:
+
+        print("\n Cadastrando Produtos .. Tempo estimado: 0:00:30")
+        start = time.time()
+        try:
+            query = """INSERT INTO products (id,asin,title,_group,salesrank,discontinued) VALUES (%s,%s,%s,%s,%s,%s)"""
+            cur = conn.cursor()
+            cur.executemany(query,all_products)
+            conn.commit()
+            cur.close()
+        except (Exception, psycopg2.DatabaseError) as error:
+            print(error)
+            return
+        finally:
+            done = time.time()
+            print(f" - {len(all_products)} produtos cadastrados em: {str(datetime.timedelta(seconds=math.floor(done - start)))}")
+            all_products.clear()
+            gc.collect()
+
+        print(" Cadastrando Clientes .. Tempo estimado: 0:01:30")
+        start = time.time()
+        try:
+            query = """INSERT INTO customers (id) VALUES (%s)"""
+            cur = conn.cursor()
+            cur.executemany(query,all_customers)
+            conn.commit()
+            cur.close()
+        except (Exception, psycopg2.DatabaseError) as error:
+            print(error)
+            return
+        finally:
+            done = time.time()
+            print(f" - {len(all_customers)} Clientes cadastrados em: {str(datetime.timedelta(seconds=math.floor(done - start)))}")
+            all_customers.clear()
+            gc.collect()
+
+        print(" Cadastrando Reviews .. Tempo estimado: 0:06:00")
+        start = time.time()
+        try:
+            query = """INSERT INTO reviews (date,asin,customer,rating,votes,helpful) VALUES (%s,%s,%s,%s,%s,%s)"""
+            cur = conn.cursor()
+            cur.executemany(query,all_reviews)
+            conn.commit()
+            cur.close()
+        except (Exception, psycopg2.DatabaseError) as error:
+            print(error)
+            return
+        finally:
+            done = time.time()
+            print(f" - {len(all_reviews)} reviews cadastrados em: {str(datetime.timedelta(seconds=math.floor(done - start)))}")
+            all_reviews.clear()
+            gc.collect()
+
+        print(" Cadastrando Categorias .. Tempo estimado: 0:00:03")
+        start = time.time()
+        valid_insertions = len(all_categories)
+        try:
+            query = """INSERT INTO categories (id,name, subcategory_of) VALUES (%s,%s,%s)"""
+            cur = conn.cursor()
+            cur.executemany(query,all_categories)
+            conn.commit()
+            cur.close()
+        except (Exception, psycopg2.DatabaseError) as error:
+            valid_insertions=0
+            print(error)
+            return
+        finally:
+            done = time.time()
+            print(f" - {valid_insertions} Categorias cadastradas em: {str(datetime.timedelta(seconds=math.floor(done - start)))}")
+            all_categories.clear()
+            gc.collect()
+
+        print(" Cadastrando Categorias dos Produtos .. 0:03:32\n")
+        start = time.time()
+        try:
+            query = """INSERT INTO product_category (product_asin,category_id) VALUES (%s,%s)"""
+            cur = conn.cursor()
+            cur.executemany(query,all_product_category)
+            conn.commit()
+            cur.close()
+        except (Exception, psycopg2.DatabaseError) as error:
+            print(error)
+            return
+        finally:
+            done = time.time()
+            print(f" - {len(all_product_category)} Categorias de produtos cadastrados em: {str(datetime.timedelta(seconds=math.floor(done - start)))}")
+            all_product_category.clear()
+            gc.collect()
+
+        if inserted_ == 274276:
+            print(" Continuando leitura dos dados ..")
+        conn.close()
 
 def create_tables():
     conn = connect()
@@ -142,6 +251,7 @@ def create_tables():
 
 def read_line_file():
 
+    global inserted_
     global all_resembling
     global id
     global asin
@@ -157,22 +267,12 @@ def read_line_file():
     all_categories_disc = {}
     aux_resembling = []
 
-    categories_found = []
-    product_categories = []
-    product_reviews_found = []
-    customers_found = []
-
-    products_registers = 0
-    customer_registers = 0
-    reviews_registers = 0
-    categories_registers = 0
-    product_category_registers = 0
     conn = connect()
     cur = conn.cursor()
 
     with open('amazon-meta.txt') as f:
 
-        print(" - Arquivo encontrado!\n Lendo arquivo e inserindo no banco .. Tempo estimado: 1:30:00")
+        print(" - Arquivo encontrado!\n Lendo arquivo .. \n")
         start = time.time()
         #pula cabeçalho do arquivo
         f.seek(80,0)
@@ -218,7 +318,7 @@ def read_line_file():
                         
                         # verifica se é a ultima categoria da linha
                         if c == len(line)-1:
-                            product_categories.append((asin,category_id))
+                            all_product_category.append((asin,category_id))
                         
                         #constroi hierarquia de categoria do produto
                         hierarchy_categories.append(category_id)
@@ -229,9 +329,9 @@ def read_line_file():
                         except KeyError:
                             all_categories_disc[category_id] = category_id
                             if c > 0:
-                                categories_found.append((category_id,name,hierarchy_categories[c-1]))
+                                all_categories.append((category_id,name,hierarchy_categories[c-1]))
                             else:
-                                categories_found.append((category_id,name,category_id))
+                                all_categories.append((category_id,name,category_id))
                 
                 elif line.__contains__("reviews: "):
                     continue
@@ -246,76 +346,39 @@ def read_line_file():
                         all_customers_disc[customer]
                     except KeyError:
                         all_customers_disc[customer] = customer
-                        customers_found.append((customer,))
-                    product_reviews_found.append((date,asin,customer,int(rating),int(votes),int(helpful)))
+                        all_customers.append((customer,))
+                    all_reviews.append((date,asin,customer,int(rating),int(votes),int(helpful)))
                 
                 else:
+                    inserted_+=1
                     #FINALIZA A LEITURA DO PRODUTO
-                    insert_product = ()
                     if discontinued:
-                        insert_product = (id,asin,title,None,0,True)
+                        all_products.append((id,asin,title,None,0,True))
                     else:
-                        insert_product = (id,asin,title,group,salesrank,False)
-
-                    #INSERE NOVAS INFORMAÇÕES ENCONTRADAS
-                    try:
-                        # insere produto
-                        query = """INSERT INTO products (id,asin,title,_group,salesrank,discontinued) VALUES (%s,%s,%s,%s,%s,%s)"""
-                        cur.execute(query, insert_product)
-                        conn.commit()
-                        products_registers += 1
-                        
-                        # insere customers encontrados
-                        if len(customers_found) > 0:
-                            query = """INSERT INTO customers (id) VALUES (%s)"""
-                            cur.executemany(query, customers_found)
-                            conn.commit()
-                            customer_registers += len(customers_found)
-                        
-                        # insere reviews do produto
-                        if len(product_reviews_found) > 0:
-                            query = """INSERT INTO reviews (date,asin,customer,rating,votes,helpful) VALUES (%s,%s,%s,%s,%s,%s)"""
-                            cur.executemany(query, product_reviews_found)
-                            conn.commit()
-                            reviews_registers += len(product_reviews_found)
-
-                        # insere categorias encontradas
-                        if len(categories_found) > 0:
-                            query = """INSERT INTO categories (id,name, subcategory_of) VALUES (%s,%s,%s)"""
-                            cur.executemany(query, categories_found)
-                            conn.commit()
-                            categories_registers += len(categories_found)
-
-                        # insere categorias do produto
-                        if len(product_categories) > 0:
-                            query = """INSERT INTO product_category (product_asin,category_id) VALUES (%s,%s)"""
-                            cur.executemany(query, product_categories)
-                            conn.commit()
-                            product_category_registers += len(product_categories)
-
-                        product_categories = []
-                        categories_found = []
-                        product_reviews_found = []
-                        customers_found = []
-
-                    except (Exception, psycopg2.DatabaseError) as error:
-                        conn.rollback()
+                        all_products.append((id,asin,title,group,salesrank,False))
                     
                     all_products_disc[asin] = asin
                     now = time.time()
-                    progress_bar(products_registers, 548552, prefix = 'Progresso:', suffix = f" {products_registers} de 548552 em {str(datetime.timedelta(seconds=math.floor(now - start)))}", length = 30)
+                    progress_bar(inserted_, 548552, prefix = 'Progresso:', suffix = f" {inserted_} de 548552 em {str(datetime.timedelta(seconds=math.floor(now - start)))}", length = 30)
 
+                    if len(all_products) == 274276:
+                        if inserted_ == 274276:
+                            print("\n\n Inserindo parte dos dados para evitar uso demasiado de memória ..                     \n")
+                            print(" - Informações encontradas até o momento:")
+                        else: 
+                            print("\n Inserindo parte final dos dados ..                                                    \n")
+                            print(" - Informações encontradas:")
+
+                        print(f" - {len(all_products)} Produtos")
+                        print(f" - {len(all_reviews)} Reviews")
+                        print(f" - {len(all_categories)} Categorias")
+                        print(f" - {len(aux_resembling)} Produtos Similares")
+                        print(f" - {len(all_product_category)} Categorias de Produtos")
+                        print(f" - {len(all_customers)} Clientes")
+                        populate_tables()
 
         except (Exception) as error:
             print(error)
-
-        done = time.time()
-        print(f" Leitura do arquivo finalizada em {str(datetime.timedelta(seconds=math.floor(done - start)))} \n Informações cadastradas:")
-        print(f" - {products_registers} Produtos")
-        print(f" - {reviews_registers} Reviews")
-        print(f" - {categories_registers} Categorias")
-        print(f" - {product_category_registers} Categorias de Produtos")
-        print(f" - {customer_registers} Clientes")
 
         print(" Removendo similaridade de produtos não presentes no arquivo .. Tempo estimado: 0:00:23")
         start = time.time()
@@ -364,5 +427,6 @@ if __name__ == '__main__':
     drop_tables()
     create_tables()
     read_line_file()
+    # populate_tables()
     done = time.time()
     print(f" Tudo Pronto para testar o tp1_3.3! Tempo total: {str(datetime.timedelta(seconds=math.floor(done - start)))}")
