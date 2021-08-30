@@ -23,21 +23,19 @@ def a(product_asin):
             cur = conn.cursor()
             query = f"""
             SELECT tt.*
-                FROM (
-                (SELECT reviews.*
-                FROM products,reviews 
-                WHERE products.asin = reviews.asin
-                AND products.asin = '{product_asin}'
-                ORDER BY reviews.rating DESC, reviews.helpful DESC
-                LIMIT 5)
-                    UNION ALL
-                (SELECT reviews.* 
-                FROM products,reviews 
-                WHERE products.asin = reviews.asin
-                AND products.asin = '{product_asin}'
-                ORDER BY reviews.rating, reviews.helpful DESC
-                LIMIT 5)
-                ) tt
+            FROM (
+                (SELECT rr.*
+                    FROM (SELECT * FROM reviews WHERE ( votes > 0 and ((helpful/100)*votes) > 50 and rating > 2) ) rr
+                    WHERE rr.asin = '{product_asin}'
+                    ORDER BY rr.rating DESC, rr.helpful DESC
+                    LIMIT 5)
+                UNION ALL
+                (SELECT rr.* 
+                    FROM (SELECT * FROM reviews WHERE ( votes > 0 and ((helpful/100)*votes) > 50 and rating > 2) ) rr
+                    WHERE rr.asin = '{product_asin}'
+                    ORDER BY rr.rating, rr.helpful DESC
+                    LIMIT 5)
+            ) tt
             """
             cur.execute(query)
             rows = cur.fetchall()
@@ -104,21 +102,59 @@ def d():
 def e():
     conn = connect()
     print("\n (e) Listar os 10 produtos com a maior média de avaliações úteis positivas por produto")
-    print("  (asin, avg_helpful, total reviews)\n")
+    print("  (asin, title, avg_rating, total reviews)\n")
     if conn is not None:
         try:
             cur = conn.cursor()
             query = """ 
-            SELECT tt.* 
-            FROM
-                (SELECT reviews.asin as asii, avg(reviews.helpful) as avg_helpful, count(reviews.asin) as total 
-                    FROM products, reviews
-                    WHERE reviews.asin = products.asin
-                    GROUP BY asii
-                    ORDER BY total DESC
-                ) tt
-            ORDER BY tt.avg_helpful DESC
+            SELECT tt.asin, products.title, tt.avg_rating, tt.total_reviews 
+                FROM
+                    (SELECT rr.asin as asin, avg(rr.rating) as avg_rating, count(rr.rating) as total_reviews
+                        FROM (SELECT * FROM reviews WHERE ( votes > 0 and ((helpful/100)*votes) > 50 and rating > 2) ) rr
+                        GROUP BY asin
+                    ) tt, products
+            WHERE products.asin = tt.asin
+            ORDER BY tt.avg_rating DESC, tt.total_reviews DESC
             LIMIT 10
+            """
+            cur.execute(query)
+            rows = cur.fetchall()
+            if rows is not None:
+                for row in rows:
+                    print(f"  {row}")
+            
+            cur.close()
+        except (Exception, psycopg2.DatabaseError) as error:
+            print(error)
+
+def f():
+    conn = connect()
+    print("\n (f) Listar a 5 categorias de produto com a maior média de avaliações úteis positivas por produto")
+    print("  (id, name)\n")
+    if conn is not None:
+        try:
+            cur = conn.cursor()
+            query = """ 
+            SELECT categories.id, categories.name FROM
+                categories,
+                (SELECT pp.category_id, sum(pp.avg_rating) as most_avg_rating FROM
+                    (SELECT * FROM
+                        (SELECT asin, avg(rating) as avg_rating, count(asin) as total_reviews FROM
+                            (SELECT * FROM reviews WHERE ( votes > 0 and ((helpful/100)*votes) > 50 and rating > 2) ) rr
+                        GROUP BY asin
+                        ) product_rating
+                    ,
+                    (SELECT products.asin, categories.name as category_name, categories.id as category_id FROM products, categories, product_category 
+                        WHERE product_category.category_id = categories.id and product_category.product_asin = products.asin
+                    ) product_category
+                    WHERE product_rating.asin = product_category.asin
+                    ORDER BY avg_rating DESC,total_reviews DESC
+                ) pp
+                GROUP BY pp.category_id
+            ) category_rating
+            WHERE categories.id = category_rating.category_id
+            ORDER BY category_rating.most_avg_rating DESC
+            LIMIT 5
             """
             cur.execute(query)
             rows = cur.fetchall()
@@ -170,4 +206,5 @@ if __name__ == '__main__':
     b('B00004VXDB')
     d()
     e()
+    f()
     g()
