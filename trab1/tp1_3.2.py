@@ -21,6 +21,8 @@ all_product_category = []
 all_customers = []
 
 inserted_=0
+total_products=0
+time_single_query=0.000092588
 
 def connect():
     try:
@@ -87,7 +89,7 @@ def populate_tables():
     
     if conn is not None:
 
-        print("\n Cadastrando Produtos .. Tempo estimado: 0:00:30")
+        print(f"\n Cadastrando Produtos .. Tempo estimado: {str(datetime.timedelta(seconds=math.floor( (time_single_query *len(all_products) ) )))}")
         start = time.time()
         try:
             query = """INSERT INTO products (id,asin,title,_group,salesrank,discontinued) VALUES (%s,%s,%s,%s,%s,%s)"""
@@ -104,7 +106,7 @@ def populate_tables():
             all_products.clear()
             gc.collect()
 
-        print(" Cadastrando Clientes .. Tempo estimado: 0:01:30")
+        print(f" Cadastrando Clientes .. Tempo estimado: {str(datetime.timedelta(seconds=math.floor( (time_single_query *len(all_customers) ) )))}")
         start = time.time()
         try:
             query = """INSERT INTO customers (id) VALUES (%s)"""
@@ -121,7 +123,7 @@ def populate_tables():
             all_customers.clear()
             gc.collect()
 
-        print(" Cadastrando Reviews .. Tempo estimado: 0:06:00")
+        print(f" Cadastrando Reviews .. Tempo estimado: {str(datetime.timedelta(seconds=math.floor( (time_single_query *len(all_reviews) ) )))}")
         start = time.time()
         try:
             query = """INSERT INTO reviews (date,asin,customer,rating,votes,helpful) VALUES (%s,%s,%s,%s,%s,%s)"""
@@ -138,7 +140,7 @@ def populate_tables():
             all_reviews.clear()
             gc.collect()
 
-        print(" Cadastrando Categorias .. Tempo estimado: 0:00:03")
+        print(f" Cadastrando Categorias .. Tempo estimado: {str(datetime.timedelta(seconds=math.floor( (time_single_query *len(all_categories) ) )))}")
         start = time.time()
         valid_insertions = len(all_categories)
         try:
@@ -157,7 +159,7 @@ def populate_tables():
             all_categories.clear()
             gc.collect()
 
-        print(" Cadastrando Categorias dos Produtos .. 0:03:32\n")
+        print(f" Cadastrando Categorias dos Produtos .. Tempo estimado: {str(datetime.timedelta(seconds=math.floor( (time_single_query *len(all_product_category) ) )))}")
         start = time.time()
         try:
             query = """INSERT INTO product_category (product_asin,category_id) VALUES (%s,%s)"""
@@ -260,6 +262,7 @@ def read_line_file():
     global salesrank
     global similars
     global discontinued
+    global total_products
 
     # discionarios auxiliares para evitar repetições
     all_products_disc = {}
@@ -269,6 +272,14 @@ def read_line_file():
 
     conn = connect()
     cur = conn.cursor()
+
+    with open('amazon-meta.txt') as f:
+        start = time.time()
+        #pula cabeçalho do arquivo
+        f.seek(80,0)
+        for line in f:
+            if line.__contains__("Id:   "):
+                total_products+=1
 
     with open('amazon-meta.txt') as f:
 
@@ -361,15 +372,12 @@ def read_line_file():
                     
                     all_products_disc[asin] = asin
                     now = time.time()
-                    progress_bar(inserted_, 548552, prefix = 'Progresso:', suffix = f" {inserted_} de 548552 em {str(datetime.timedelta(seconds=math.floor(now - start)))}", length = 30)
+                    progress_bar(inserted_, total_products, prefix = 'Progresso:', suffix = f" {inserted_} de {total_products} em {str(datetime.timedelta(seconds=math.floor(now - start)))}", length = 30)
 
                     if len(all_products) == 274276:
-                        if inserted_ == 274276:
-                            print("\n\n Inserindo parte dos dados para evitar uso demasiado de memória ..                     \n")
-                            print(" - Informações encontradas até o momento:")
-                        else: 
-                            print("\n Inserindo parte final dos dados ..                                                    \n")
-                            print(" - Informações encontradas:")
+                        
+                        print("\n\n Inserindo parte dos dados para evitar uso demasiado de memória ..                     \n")
+                        print(" - Informações encontradas até o momento:")
 
                         print(f" - {len(all_products)} Produtos")
                         print(f" - {len(all_reviews)} Reviews")
@@ -381,6 +389,18 @@ def read_line_file():
 
         except (Exception) as error:
             print(error)
+
+        #Se ainda tiver produtos não catastrados
+        if len(all_products) > 0:
+            print("\n Inserindo parte final dos dados ..                                                    \n")
+            print(" - Informações encontradas:")
+            print(f" - {len(all_products)} Produtos")
+            print(f" - {len(all_reviews)} Reviews")
+            print(f" - {len(all_categories)} Categorias")
+            print(f" - {len(aux_resembling)} Produtos Similares")
+            print(f" - {len(all_product_category)} Categorias de Produtos")
+            print(f" - {len(all_customers)} Clientes")
+            populate_tables()
 
         print(" Removendo similaridade de produtos não presentes no arquivo .. Tempo estimado: 0:00:23")
         start = time.time()
@@ -397,7 +417,7 @@ def read_line_file():
         print(f" - {len(all_resembling)} Similaridades restantes")
         print(f" - {remove_invalid_asins} Similaridades inválidas removidas em: {str(datetime.timedelta(seconds=math.floor(done - start)))}")
 
-        print(" Cadastrando Similaridade de Produtos .. Tempo estimado: 00:01:53")
+        print(f" Cadastrando Similaridade de Produtos .. Tempo estimado: {str(datetime.timedelta(seconds=math.floor( (time_single_query *len(all_resembling) ) )))}")
         start = time.time()
         valid_insertions = len(all_resembling)
         try:
@@ -424,11 +444,10 @@ def read_line_file():
 if __name__ == '__main__':
     os.system("service postgresql start")
     print("\n (OBS: Olá caro usuário! É possivel acessar o banco de dados deste container direto da sua máquina.)\n")
-    print(" Os dados para o acesso:\n  host: localhost\n  port: 5432\n  user: root \n  password: password\n  database: root \n")
+    print(" Os dados para o acesso:\n  host: localhost\n  port: 8000\n  user: root \n  password: password\n  database: root \n")
     start = time.time()
     drop_tables()
     create_tables()
     read_line_file()
-    # populate_tables()
     done = time.time()
-    print(f" Tudo Pronto para testar o tp1_3.3! Tempo total: {str(datetime.timedelta(seconds=math.floor(done - start)))}")
+    print(f"\n Tudo Pronto para testar o tp1_3.3! Tempo total: {str(datetime.timedelta(seconds=math.floor(done - start)))}")
