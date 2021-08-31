@@ -353,9 +353,11 @@ def read_line_file():
                     inserted_+=1
                     #FINALIZA A LEITURA DO PRODUTO
                     if discontinued:
-                        all_products.append((id,asin,title,None,0,True))
+                        all_products.append((id,asin,None,None,0,True))
                     else:
                         all_products.append((id,asin,title,group,salesrank,False))
+
+                    discontinued = False
                     
                     all_products_disc[asin] = asin
                     now = time.time()
