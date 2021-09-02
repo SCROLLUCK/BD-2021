@@ -1,6 +1,0 @@
-version: "3.3"
-services:
-  tp1_lucas_brenda:
-    build: .
-    ports:
-      - "8000:5432"
