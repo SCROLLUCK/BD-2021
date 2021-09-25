@@ -1,0 +1,4 @@
+version: "3.3"
+services:
+  lucas_lima_brenda_aguiar:
+    build: .
