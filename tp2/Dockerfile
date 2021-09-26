@@ -1,8 +1,5 @@
-
 FROM gcc:latest
-
-RUN apt-get update 
-
 ADD . /
 
-RUN gcc -o upload upload.cpp
+RUN g++ -o upload upload.cpp
+RUN ./upload
