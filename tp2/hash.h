@@ -31,7 +31,7 @@ class Hash {
             }
         };
         ~Hash();
-        void insere(int valor,Elemento* elem);
+        int insere(int valor,Elemento* elem);
         void busca(int valor);
         void imprime();
         void estatisticas();
@@ -44,7 +44,7 @@ int Hash::espalha(int valor){
 
 };
 
-void Hash::insere(int valor, Elemento* NovoElem){
+int  Hash::insere(int valor, Elemento* NovoElem){
 
     int chave = espalha(valor);
     if((chave <= tamanho) && (chave >= 0)){ // vefica se é uma chave válida
@@ -58,8 +58,9 @@ void Hash::insere(int valor, Elemento* NovoElem){
         NBucket->insere(NovoElem); // insere o registro no Bucket
     }else{
         printf("\n Chave: %d extrapolou o tamanho da Hash:%d",chave,tamanho);
+        return -1;
     }
-
+    return chave;
 };
 
 void Hash::busca(int valor){ //busca usando ID

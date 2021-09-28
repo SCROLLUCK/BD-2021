@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include "Encadeada.h"
 #define SIZEOFBLOCO 4096
 
 class No {
@@ -15,15 +14,14 @@ class No {
 
 class BP {
     private:
-        No* raiz; 
         int ocupacao;
         int ordem;
         No* novo_no_folha();
         No* novo_no();
-        No* nova_arvore(int valor, Elemento * ponteiro);
+        No* nova_arvore(int valor, void * ponteiro);
         No* busca_folha(No * const raiz, int chave);
-        No* insere_na_folha(No * folha, int chave, Elemento * ponteiro);
-        No* insere_na_folha_apos_spit(No * raiz, No * folha, int chave, Elemento* ponteiro);
+        No* insere_na_folha(No * folha, int chave, void * ponteiro);
+        No* insere_na_folha_apos_spit(No * raiz, No * folha, int chave, void* ponteiro);
         No* insere_no_no_apos_split(No * raiz, No * No_antigo, int indice_esquerdo, int chave, No * direita);
         No* insere_no_parente(No * raiz, No * esquerda, int chave, No * direita);
         No* insere_na_nova_raiz(No * esquerda, int chave, No * direita);
@@ -42,14 +40,15 @@ class BP {
             return indice_esquerdo;
         }
     public:
+		No* raiz; 
         BP(int Ordem){
             ordem = Ordem;
             raiz = NULL;
             ocupacao = 0;
         }
         ~BP();
-        No* insere(No* No,int chave, Elemento* ponteiro);
-        Elemento* busca(BP * const raiz, int chave);
+        No* insere(No* No,int chave, void* ponteiro);
+        void* busca(No * raiz, int chave);
         void imprime(BP* No);
 };
 
@@ -82,7 +81,7 @@ No* BP::novo_no_folha(){
     return novo_;
 }
 
-No* BP::nova_arvore(int chave, Elemento * pointer) {
+No* BP::nova_arvore(int chave, void * pointer) {
 
 	raiz = novo_no_folha();
 	raiz->chaves[0] = chave;
@@ -111,6 +110,24 @@ No* BP::busca_folha(No * const raiz, int chave) {
 	return c;
 }
 
+void* BP::busca(No * raiz, int chave) {
+    
+	if (raiz == NULL) {
+        return NULL;
+    }
+
+	int i = 0;
+    No* folha = NULL;
+	folha = busca_folha(raiz, chave);
+
+	for (i = 0; i < folha->num_chaves; i++)
+		if (folha->chaves[i] == chave) break;
+	if (i == folha->num_chaves)
+		return NULL;
+	else
+		return folha->ponteiros[i];
+}
+
 No* BP::insere_no_no(No * raiz, No * n, int indice_esquerdo, int chave, No * direita) {
 
 	for (int i = n->num_chaves; i > indice_esquerdo; i--) {
@@ -123,7 +140,7 @@ No* BP::insere_no_no(No * raiz, No * n, int indice_esquerdo, int chave, No * dir
 	return raiz;
 }
 
-No* BP::insere_na_folha(No * folha, int chave, Elemento * ponteiro) {
+No* BP::insere_na_folha(No * folha, int chave, void * ponteiro) {
 
 	int i, ponto_insercao = 0;
     // Procura posição certa para inserir
@@ -141,7 +158,7 @@ No* BP::insere_na_folha(No * folha, int chave, Elemento * ponteiro) {
 	return folha;
 }
 
-No* BP::insere_na_folha_apos_spit(No * raiz, No * folha, int chave, Elemento * ponteiro) {
+No* BP::insere_na_folha_apos_spit(No * raiz, No * folha, int chave, void * ponteiro) {
 
 	No * nova_folha;
 	int * chaves_temporarias;
@@ -293,7 +310,7 @@ No* BP::insere_no_parente(No * raiz, No * esquerda, int chave, No * direita) {
 	return insere_no_no_apos_split(raiz, parente, indice_esquerdo, chave, direita);
 }
 
-No* BP::insere(No* raiz,int chave, Elemento* endereco){
+No* BP::insere(No* raiz,int chave, void* endereco){
     
     No* folha = NULL;
 
