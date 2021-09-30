@@ -396,7 +396,7 @@ void BP::inicia_BP_atravez_de_arquivo(string diretorio){
 	ifstream input(diretorio, ios::in | ios::binary);
 	int chave, endereco;
 	if(!input){
-		printf("Arquivo de indice não encontrado!");
+		printf("Arquivo de indice não encontrado! Rode o programa \"upload.cpp\" para cria-lo.");
 		exit(1);
 	}
 	while (!input.eof()) {
