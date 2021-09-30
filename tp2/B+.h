@@ -27,19 +27,19 @@ class BP {
         No* insere_na_folha(No* folha, int chave, Endereco* ponteiro);
 		No* insere_no_no(No* raiz, No* n, int indice_esquerdo, int chave, No* direita); 
         No* insere_no_folha_apos_split(No* raiz, No* folha, int chave, Endereco* ponteiro);
-        No* insere_no_no_apos_split(No* raiz, No* old_node, int indice_esquerdo, int chave, No* direita);
-        No* insere_no_parente(No* raiz, No* left, int chave, No* direita);
-        No* insere_na_nova_raiz(No* left, int chave, No* direita);
+        No* insere_no_no_apos_split(No* raiz, No* no_antigo, int indice_esquerdo, int chave, No* direita);
+        No* insere_no_parente(No* raiz, No* esquerda, int chave, No* direita);
+        No* insere_na_nova_raiz(No* esquerda, int chave, No* direita);
         int cut(int tamanho) {
             if (tamanho % 2 == 0)
                 return tamanho/2;
             else
                 return tamanho/2 + 1;
         }
-        int obtem_indice_esquerdo(No* parente, No* left) {
+        int obtem_indice_esquerdo(No* parente, No* esquerda) {
 			int indice_esquerdo = 0;
 			while (indice_esquerdo <= parente->num_chaves && 
-					parente->ponteiros[indice_esquerdo] != left)
+					parente->ponteiros[indice_esquerdo] != esquerda)
 				indice_esquerdo++;
 			return indice_esquerdo;
 		}
@@ -104,10 +104,10 @@ Endereco* BP::busca(No* raiz, int chave) {
 		return (Endereco*) folha->ponteiros[i];
 }
 
-Endereco* make_record(int value) {
+Endereco* cria_endereco(int value) {
 	Endereco* novo_endereco = (Endereco*)malloc(sizeof(Endereco));
 	if (novo_endereco == NULL) {
-		perror("Endereco creation.");
+		perror("Erro ao criar ponteiro para endereco.");
 		exit(1);
 	}
 	else {
@@ -117,27 +117,27 @@ Endereco* make_record(int value) {
 }
 
 No* BP::cria_no(void) {
-	No* new_node;
-	new_node = (No*) malloc(sizeof(No));
-	if (new_node == NULL) {
-		perror("No creation.");
+	No* novo_no;
+	novo_no = (No*) malloc(sizeof(No));
+	if (novo_no == NULL) {
+		perror("Erro ao criar novo No.");
 		exit(1);
 	}
-	new_node->chaves = (int*) malloc((ordem - 1) * sizeof(int));
-	if (new_node->chaves == NULL) {
-		perror("New No chaves array.");
+	novo_no->chaves = (int*) malloc((ordem - 1) * sizeof(int));
+	if (novo_no->chaves == NULL) {
+		perror("Erro ao criar ponteiro para vetor de chaves auxiliar");
 		exit(1);
 	}
-	new_node->ponteiros = (void**) malloc(ordem * sizeof(void *));
-	if (new_node->ponteiros == NULL) {
-		perror("New No ponteiros array.");
+	novo_no->ponteiros = (void**) malloc(ordem * sizeof(void *));
+	if (novo_no->ponteiros == NULL) {
+		perror("Erro ao criar ponteiro para vetor de ponteiros auxiliar");
 		exit(1);
 	}
-	new_node->folha = false;
-	new_node->num_chaves = 0;
-	new_node->parente = NULL;
-	new_node->prox = NULL;
-	return new_node;
+	novo_no->folha = false;
+	novo_no->num_chaves = 0;
+	novo_no->parente = NULL;
+	novo_no->prox = NULL;
+	return novo_no;
 }
 
 No* BP::cria_folha(void) {
@@ -246,10 +246,10 @@ No* BP::insere_no_no(No* raiz, No* n, int indice_esquerdo, int chave, No* direit
 	return raiz;
 }
 
-No* BP::insere_no_no_apos_split(No* raiz, No* old_node, int indice_esquerdo, int chave, No* direita) {
+No* BP::insere_no_no_apos_split(No* raiz, No* no_antigo, int indice_esquerdo, int chave, No* direita) {
 
 	int i, j, split, k_prime;
-	No* new_node, * child;
+	No* novo_no, * child;
 	int * temp_chaves;
 	No** temp_ponteiros;
 
@@ -264,57 +264,57 @@ No* BP::insere_no_no_apos_split(No* raiz, No* old_node, int indice_esquerdo, int
 		exit(1);
 	}
 
-	for (i = 0, j = 0; i < old_node->num_chaves + 1; i++, j++) {
+	for (i = 0, j = 0; i < no_antigo->num_chaves + 1; i++, j++) {
 		if (j == indice_esquerdo + 1) j++;
-		temp_ponteiros[j] = (No*) old_node->ponteiros[i];
+		temp_ponteiros[j] = (No*) no_antigo->ponteiros[i];
 	}
 
-	for (i = 0, j = 0; i < old_node->num_chaves; i++, j++) {
+	for (i = 0, j = 0; i < no_antigo->num_chaves; i++, j++) {
 		if (j == indice_esquerdo) j++;
-		temp_chaves[j] = old_node->chaves[i];
+		temp_chaves[j] = no_antigo->chaves[i];
 	}
 
 	temp_ponteiros[indice_esquerdo + 1] = direita;
 	temp_chaves[indice_esquerdo] = chave;
 
 	split = cut(ordem);
-	new_node = cria_no();
-	old_node->num_chaves = 0;
+	novo_no = cria_no();
+	no_antigo->num_chaves = 0;
 	for (i = 0; i < split - 1; i++) {
-		old_node->ponteiros[i] = temp_ponteiros[i];
-		old_node->chaves[i] = temp_chaves[i];
-		old_node->num_chaves++;
+		no_antigo->ponteiros[i] = temp_ponteiros[i];
+		no_antigo->chaves[i] = temp_chaves[i];
+		no_antigo->num_chaves++;
 	}
-	old_node->ponteiros[i] = temp_ponteiros[i];
+	no_antigo->ponteiros[i] = temp_ponteiros[i];
 	k_prime = temp_chaves[split - 1];
 	for (++i, j = 0; i < ordem; i++, j++) {
-		new_node->ponteiros[j] = temp_ponteiros[i];
-		new_node->chaves[j] = temp_chaves[i];
-		new_node->num_chaves++;
+		novo_no->ponteiros[j] = temp_ponteiros[i];
+		novo_no->chaves[j] = temp_chaves[i];
+		novo_no->num_chaves++;
 	}
-	new_node->ponteiros[j] = temp_ponteiros[i];
+	novo_no->ponteiros[j] = temp_ponteiros[i];
 	free(temp_ponteiros);
 	free(temp_chaves);
-	new_node->parente = old_node->parente;
-	for (i = 0; i <= new_node->num_chaves; i++) {
-		child = (No*) new_node->ponteiros[i];
-		child->parente = new_node;
+	novo_no->parente = no_antigo->parente;
+	for (i = 0; i <= novo_no->num_chaves; i++) {
+		child = (No*) novo_no->ponteiros[i];
+		child->parente = novo_no;
 	}
 
-	return insere_no_parente(raiz, old_node, k_prime, new_node);
+	return insere_no_parente(raiz, no_antigo, k_prime, novo_no);
 }
 
-No* BP::insere_no_parente(No* raiz, No* left, int chave, No* direita) {
+No* BP::insere_no_parente(No* raiz, No* esquerda, int chave, No* direita) {
 
 	int indice_esquerdo;
 	No* parente;
 
-	parente = left->parente;
+	parente = esquerda->parente;
 
 	if (parente == NULL)
-		return insere_na_nova_raiz(left, chave, direita);
+		return insere_na_nova_raiz(esquerda, chave, direita);
 
-	indice_esquerdo = obtem_indice_esquerdo(parente, left);
+	indice_esquerdo = obtem_indice_esquerdo(parente, esquerda);
 
 	if (parente->num_chaves < ordem - 1)
 		return insere_no_no(raiz, parente, indice_esquerdo, chave, direita);
@@ -322,15 +322,15 @@ No* BP::insere_no_parente(No* raiz, No* left, int chave, No* direita) {
 	return insere_no_no_apos_split(raiz, parente, indice_esquerdo, chave, direita);
 }
 
-No* BP::insere_na_nova_raiz(No* left, int chave, No* direita) {
+No* BP::insere_na_nova_raiz(No* esquerda, int chave, No* direita) {
 
 	No* raiz = cria_no();
 	raiz->chaves[0] = chave;
-	raiz->ponteiros[0] = left;
+	raiz->ponteiros[0] = esquerda;
 	raiz->ponteiros[1] = direita;
 	raiz->num_chaves++;
 	raiz->parente = NULL;
-	left->parente = raiz;
+	esquerda->parente = raiz;
 	direita->parente = raiz;
 	return raiz;
 }
@@ -348,29 +348,28 @@ No* BP::inicia_nova_arvore(int chave, Endereco* ponteiro) {
 
 No* BP::insere(No* raiz, int chave, int value) {
 
-	Endereco* record_ponteiro = NULL;
+	Endereco* endereco = NULL;
 	No* folha = NULL;
 
-	record_ponteiro = busca(raiz, chave);
-    if (record_ponteiro != NULL) {
-
-        record_ponteiro->value = value;
+	endereco = busca(raiz, chave);
+    if (endereco != NULL) {
+        endereco->value = value;
         return raiz;
     }
 
-	record_ponteiro = make_record(value);
+	endereco = cria_endereco(value);
 
 	if (raiz == NULL) 
-		return inicia_nova_arvore(chave, record_ponteiro);
+		return inicia_nova_arvore(chave, endereco);
 
 	folha = busca_folha(raiz, chave);
 
 	if (folha->num_chaves < ordem - 1) {
-		folha = insere_na_folha(folha, chave, record_ponteiro);
+		folha = insere_na_folha(folha, chave, endereco);
 		return raiz;
 	}
 
-	return insere_no_folha_apos_split(raiz, folha, chave, record_ponteiro);
+	return insere_no_folha_apos_split(raiz, folha, chave, endereco);
 }
 
 void BP::cria_indice(int chave){
@@ -396,7 +395,7 @@ void BP::inicia_BP_atravez_de_arquivo(string diretorio){
 	ifstream input(diretorio, ios::in | ios::binary);
 	int chave, endereco;
 	if(!input){
-		printf("Arquivo de indice não encontrado! Rode o programa \"upload.cpp\" para cria-lo.");
+		printf(" - Arquivo de indice não encontrado! Rode o programa \"upload.cpp\" para cria-lo.");
 		exit(1);
 	}
 	while (!input.eof()) {
