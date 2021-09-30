@@ -5,6 +5,7 @@
 */
 #include <iostream>
 #include <fstream>
+#include <string>
 #define SIZEOFBLOCO 4096
 #define SIZEOFELEMENTO sizeof(Elemento)
 
@@ -96,11 +97,13 @@ class Bucket {
 
         Bloco* Prim;
         int NumeroBlocos;
+        int chave;
         void insere(Elemento* NovoElemento);
         Bloco* removee();
         void* busca(int valor);
         void imprime();
-        Bucket(){
+        Bucket(int Chave){
+            chave = Chave;
             Prim = NULL;
             NumeroBlocos = 0;
         };
@@ -111,23 +114,16 @@ class Bucket {
 void Bucket::insere(Elemento* NovoElem){
     Bloco* Aux = Prim;
     bool inserido = false;
-    ofstream wf("data.dat", ios::out | ios::binary | ios::ate );
-    if(!wf) {
-        cout << "Não foi possivel abrir o arquivo!" << endl;
-        return;
-    }
    
     if(Prim == NULL){ // Se o bucket está vazio, cria um bloco
         Prim = new Bloco();
         Prim->insere(NovoElem);
         NumeroBlocos = NumeroBlocos+1;
-        wf.write((char *) &NovoElem, sizeof(NovoElem));
         inserido = true;
     }
     while(!inserido){
         if(Aux->ocupacao < Aux->fatorBloco){ // vefica se tem espaco no bloco.. Se tiver, insere o elemento no bloco
             Aux->insere(NovoElem);
-            wf.write((char *) &NovoElem, sizeof(NovoElem));
             inserido = true;
         }
         if(Aux->prox == NULL && !inserido){
@@ -136,7 +132,6 @@ void Bucket::insere(Elemento* NovoElem){
         }
         Aux = Aux->prox;
     }
-    wf.close();
 };
 
 void Bucket::imprime(){

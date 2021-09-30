@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <iostream>
 #include "Encadeada.h" // Importa a Encadeada.h para tratar colisoes
+#include "B+.h"
 
 /*  Hash com Encadeamento Aberto
     Funcão Hash : ((valor*7)%(tamanho/3))*3
@@ -34,14 +35,13 @@ class Hash {
         int insere(int valor,Elemento* elem);
         void busca(int valor);
         void imprime();
+        void gera_arquivos();
         void estatisticas();
 };
 
 int Hash::espalha(int valor){
-
     int chave = ((valor*7)/3)%(tamanho);
     return chave;
-
 };
 
 int  Hash::insere(int valor, Elemento* NovoElem){
@@ -49,7 +49,7 @@ int  Hash::insere(int valor, Elemento* NovoElem){
     int chave = espalha(valor);
     if((chave <= tamanho) && (chave >= 0)){ // vefica se é uma chave válida
         if(dados[chave] == NULL){
-            dados[chave] = new Bucket(); // Cria um novo Bucket caso a chave gerada acesse uma posicao ainda vazia
+            dados[chave] = new Bucket(chave); // Cria um novo Bucket caso a chave gerada acesse uma posicao ainda vazia
             ocupacao = ocupacao+1; //atualiza ocupacao na hash
         }else{
             colisoes = colisoes+1; // se nao for um campo vazio, atualiza o numero de colisoes
@@ -105,9 +105,56 @@ void Hash::estatisticas(){
        if(dados[i]){
             Bucket* BBucket = (Bucket*) dados[i];
             if((BBucket->NumeroBlocos-1) > maximo){
-            maximo = BBucket->NumeroBlocos-1;
+                maximo = BBucket->NumeroBlocos-1;
             }
         }
     }
     printf("\n - Numero Maximo de Blocos de Overflow: %d\n",maximo);
 };
+
+void Hash::gera_arquivos(){
+
+    ofstream output ("blocos.dat", ios::out | ios::binary);
+    BP* bp = new BP(4);
+    for(int i=0; i < tamanho; i++){ //cada posicao da hash
+        if( dados[i] != NULL){
+            Bucket* bucket = (Bucket*) dados[i]; 
+            Bloco* bloco = bucket->Prim;
+            while(bloco){ // cada bloco
+                for(int k=0; k< bloco->ocupacao; k++){ // cada elemento 
+                    Elemento* Elem = (Elemento*) bloco->dados[k];
+                    char *buf;
+                    int size=0, posicao = output.tellp();
+                    
+                    output.write(reinterpret_cast<char *>(&Elem->ID), sizeof(int));
+                    
+                    size = Elem->Titulo.length();
+                    output.write(reinterpret_cast<char *>(&size), sizeof(int));
+                    output.write(Elem->Titulo.c_str(), size);
+                    
+                    output.write(reinterpret_cast<char *>(&Elem->Ano), sizeof(int));
+                    
+                    size = Elem->Autores.length();
+                    output.write(reinterpret_cast<char *>(&size), sizeof(int));
+                    output.write(Elem->Autores.c_str(), size);
+                    
+                    output.write(reinterpret_cast<char *>(&Elem->Citacoes), sizeof(int));
+                    
+                    output.write(Elem->Atualizacao.c_str(), Elem->Atualizacao.length());
+                    
+                    size = Elem->Snipet.length();
+                    output.write(reinterpret_cast<char *>(&size), sizeof(int));
+                    output.write(Elem->Snipet.c_str(), size);
+                    
+                    output.flush(); 
+                    bp->ROOT = bp->insere(bp->ROOT,Elem->ID,posicao);
+
+                }    
+                bloco = bloco->prox;
+            }
+        }
+    }
+    printf(" - Arquivo de dados criado.\n");
+    bp->cria_indice(1);
+    
+}

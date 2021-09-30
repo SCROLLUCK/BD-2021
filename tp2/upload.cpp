@@ -7,7 +7,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "hash.h"
-#include "B+.h"
 
 /*Programa upload<file> Gera 3 Arquivos: Arquivo de Dados, Indice Prim�rio, Indice Secund�rio.
 
@@ -64,6 +63,15 @@ string removeChar(string s, char c) {
     return result;
 }
 
+std::string ReplaceAll(std::string str, const std::string& from, const std::string& to) {
+    size_t start_pos = 0;
+    while((start_pos = str.find(from, start_pos)) != std::string::npos) {
+        str.replace(start_pos, from.length(), to);
+        start_pos += to.length(); // Handles case where 'to' is a substring of 'from'
+    }
+    return str;
+}
+
 /*
     Funcão geradora dos arquivos de dados, índice primário e índice secundário
     @param url Diretório do arquivo de entrada
@@ -75,11 +83,21 @@ void upload(){
     BP* bp = new BP(4);
     std::ifstream infile("artigo.csv");
     std::string line;
-
+    if (!infile){
+        printf(" - Arquivo não encontrado!\n");
+        exit(1);
+    }
     while (std::getline(infile, line)){
         
         std::istringstream iss(line);
-        vector<string> lineS = split(line.c_str(), ";");
+        if (line.find(";;") != std::string::npos) {
+            line = ReplaceAll(line, std::string(";;"), std::string(";\"\";"));
+        }
+        if (line.find("NULL") != std::string::npos) {
+            line = ReplaceAll(line, std::string("NULL"), std::string("\"NULL\""));
+        }
+        vector<string> lineS = split(line.c_str(), "\";\"");
+        
         for (int i =0;i< lineS.size();i++) lineS[i] = removeChar(lineS[i],'"');
         int id = atoi(lineS[0].c_str());
         string titulo = lineS[1];
@@ -89,19 +107,15 @@ void upload(){
         string atualizacao = lineS[5];
         string snipet = lineS[6];
     
+    
         // printf("%d,%s,%d,%s,%d,%s,%s",id,titulo.c_str(),ano,autores.c_str(),citacoes,atualizacao.c_str(),snipet.c_str());
         Elemento* NovoElemento = new Elemento(id,titulo,ano,autores,citacoes,atualizacao,snipet); // Cria um novo elemento e guarda os dados do registro lido
         // NovoElemento->imprime(); //Exibe os dados do Elemento para verificação
-        int chave = myhash->insere(NovoElemento->ID,NovoElemento); //Insere o Elemento na hash com base no ID
-        bp->insere(bp->raiz,id,(void*) myhash->dados[chave]);
+        myhash->insere(NovoElemento->ID,NovoElemento); //Insere o Elemento na hash com base no ID
     }
 
-    // myhash->imprime();
+    myhash->gera_arquivos();
     myhash->estatisticas(); // Exibe informaçẽes sobre a hash
-    Bucket* elem = (Bucket*) bp->busca(bp->raiz,1);
-    if(elem != NULL) elem->imprime();
-    else printf("nenhum bucket encontrado!\n");
-
 
 }
 
