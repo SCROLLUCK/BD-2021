@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #define SIZEOFBLOCO 4096
 
-typedef struct rec{
+typedef struct endereco{
 	int value;
 }Endereco;
 
@@ -148,18 +148,18 @@ No* BP::cria_folha(void) {
 
 No* BP::insere_na_folha(No* folha, int chave, Endereco* ponteiro) {
 
-	int i, insereion_point;
+	int i, ponto_insersao;
 
-	insereion_point = 0;
-	while (insereion_point < folha->num_chaves && folha->chaves[insereion_point] < chave)
-		insereion_point++;
+	ponto_insersao = 0;
+	while (ponto_insersao < folha->num_chaves && folha->chaves[ponto_insersao] < chave)
+		ponto_insersao++;
 
-	for (i = folha->num_chaves; i > insereion_point; i--) {
+	for (i = folha->num_chaves; i > ponto_insersao; i--) {
 		folha->chaves[i] = folha->chaves[i - 1];
 		folha->ponteiros[i] = folha->ponteiros[i - 1];
 	}
-	folha->chaves[insereion_point] = chave;
-	folha->ponteiros[insereion_point] = ponteiro;
+	folha->chaves[ponto_insersao] = chave;
+	folha->ponteiros[ponto_insersao] = ponteiro;
 	folha->num_chaves++;
 	return folha;
 }
@@ -217,6 +217,7 @@ No* BP::insere_no_folha_apos_split(No* raiz, No* folha, int chave, Endereco* pon
 	free(temp_ponteiros);
 	free(temp_chaves);
 
+	nova_folha->prox = folha->prox;
 	folha->prox = nova_folha;
 
 	nova_folha->ponteiros[ordem - 1] = folha->ponteiros[ordem - 1];

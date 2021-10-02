@@ -1,9 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <iostream>
-#include "Encadeada.h" // Importa a Encadeada.h para tratar colisoes
+#include "Encadeada.h"
 #include "B+.h"
-
 /*  Hash com Encadeamento Aberto
     Funcão Hash : ((valor*7)%(tamanho/3))*3
     Criador: Lucas de Lima Castro
@@ -14,7 +13,6 @@ using namespace std;
 
 class Hash {
     private:
-        int espalha(int valor);
         int tamanho;
         int ocupacao;
         int colisoes;
@@ -33,6 +31,7 @@ class Hash {
         };
         ~Hash();
         int insere(int valor,Elemento* elem);
+        int espalha(int valor);
         void busca(int valor);
         void imprime();
         void gera_arquivos();
@@ -115,17 +114,27 @@ void Hash::estatisticas(){
 void Hash::gera_arquivos(){
 
     ofstream output ("blocos.dat", ios::out | ios::binary);
-    BP* bp = new BP(4);
-    for(int i=0; i < tamanho; i++){ //cada posicao da hash
+    int ordem=4, endereco_invalido=-1;
+    BP* bp = new BP(ordem);
+
+    // escreve tamanho da hash
+    ofstream map ("map.dat", ios::out | ios::binary);
+    map.write(reinterpret_cast<char *>(&tamanho), sizeof(int));
+
+    for(int i=0; i < tamanho; i++){ // cada posicao da hash
         if( dados[i] != NULL){
             Bucket* bucket = (Bucket*) dados[i]; 
             Bloco* bloco = bucket->Prim;
+            int posicao = output.tellp();
             while(bloco){ // cada bloco
-                for(int k=0; k< bloco->ocupacao; k++){ // cada elemento 
+                // escreve offset do bloco chave_na_hash e ocupacao do bloco
+                output.write(reinterpret_cast<char *>(&i), sizeof(int));
+                output.write(reinterpret_cast<char *>(&bloco->ocupacao), sizeof(int));
+
+                for(int k=0; k< bloco->ocupacao; k++){ // cada elemento no bloco
                     Elemento* Elem = (Elemento*) bloco->dados[k];
                     char *buf;
-                    int size=0, posicao = output.tellp();
-                    
+                    int size=0;
                     output.write(reinterpret_cast<char *>(&Elem->ID), sizeof(int));
                     
                     size = Elem->Titulo.length();
@@ -152,9 +161,17 @@ void Hash::gera_arquivos(){
                 }    
                 bloco = bloco->prox;
             }
-        }
+            map.write(reinterpret_cast<char *>(&i), sizeof(int));
+            map.write(reinterpret_cast<char *>(&posicao), sizeof(int));
+            map.flush();
+        }else {
+            map.write(reinterpret_cast<char *>(&i), sizeof(int));
+            map.write(reinterpret_cast<char *>(&endereco_invalido), sizeof(int));
+            map.flush();
+        }  
     }
+    system("cat map.dat blocos.dat > dados.dat");
+    system("rm map.dat blocos.dat");
     printf(" - Arquivo de dados criado.\n");
     bp->cria_indice(1);
-    
 }
