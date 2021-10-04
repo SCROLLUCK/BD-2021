@@ -29,13 +29,13 @@ int main( ){
 			input.read(reinterpret_cast<char *>(&chave_no_arquivo), sizeof(int));
 			input.read(reinterpret_cast<char *>(&endereco), sizeof(int));
 			
-			printf("Chave:%d Chave no arquivo: %d Endereco: %d\n",chave,chave_no_arquivo,endereco);
+			// printf("Chave:%d Chave no arquivo: %d Endereco: %d\n",chave,chave_no_arquivo,endereco);
 			if(endereco != -1){
 
 			input.seekg(endereco+tamanho_map);
 			input.read(reinterpret_cast<char *>(&chave_no_arquivo), sizeof(int));
 			input.read(reinterpret_cast<char *>(&ocupacao), sizeof(int));
-			printf("Chave: %d ocupacao: %d\n",chave_no_arquivo,ocupacao);
+			// printf("Chave: %d ocupacao: %d\n",chave_no_arquivo,ocupacao);
 		
 			while(valor != id){
 
