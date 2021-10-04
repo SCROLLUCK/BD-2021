@@ -3,14 +3,14 @@
 #define SIZEOFBLOCO 4096
 
 typedef struct endereco{
-	int value;
+	int valor;
 }Endereco;
 
 class No {
 	public:
         void ** ponteiros;
         int * chaves;
-        No* parente;
+        No* pai;
         bool folha;
         int num_chaves;
         No* prox;
@@ -18,7 +18,6 @@ class No {
 
 class BP {
     private:
-        int ocupacao;
         int ordem;
         No* cria_folha();
         No* cria_no(void);
@@ -28,46 +27,50 @@ class BP {
 		No* insere_no_no(No* raiz, No* n, int indice_esquerdo, int chave, No* direita); 
         No* insere_no_folha_apos_split(No* raiz, No* folha, int chave, Endereco* ponteiro);
         No* insere_no_no_apos_split(No* raiz, No* no_antigo, int indice_esquerdo, int chave, No* direita);
-        No* insere_no_parente(No* raiz, No* esquerda, int chave, No* direita);
+        No* insere_no_pai(No* raiz, No* esquerda, int chave, No* direita);
         No* insere_na_nova_raiz(No* esquerda, int chave, No* direita);
-        int cut(int tamanho) {
+        int split_carga(int tamanho) {
             if (tamanho % 2 == 0)
                 return tamanho/2;
             else
                 return tamanho/2 + 1;
         }
-        int obtem_indice_esquerdo(No* parente, No* esquerda) {
+        int obtem_indice_esquerdo(No* pai, No* esquerda) {
 			int indice_esquerdo = 0;
-			while (indice_esquerdo <= parente->num_chaves && 
-					parente->ponteiros[indice_esquerdo] != esquerda)
+			while (indice_esquerdo <= pai->num_chaves && 
+					pai->ponteiros[indice_esquerdo] != esquerda)
 				indice_esquerdo++;
 			return indice_esquerdo;
 		}
-		Endereco* cria_endereco(int value) {
+		Endereco* cria_endereco(int valor) {
 			Endereco* novo_endereco = (Endereco*) malloc(sizeof(Endereco));
 			if (novo_endereco == NULL) {
 				perror("Erro ao criar endereço");
 				exit(1);
 			}else {
-				novo_endereco->value = value;
+				novo_endereco->valor = valor;
 			}
 			return novo_endereco;
 		}
     public:
-		No* ROOT;
+		No* RAIZ;
 		No* queue = NULL;
         BP(int Ordem){
             ordem = Ordem;
-            ROOT = NULL;
-            ocupacao = 0;
+            RAIZ = NULL;
         }
         ~BP();
-        No* insere(No* raiz, int chave, int value);
+        No* insere(No* raiz, int chave, int valor);
         Endereco* busca(No* raiz, int chave);
-		void cria_indice(int chave);
-		void inicia_BP_atravez_de_arquivo(string diretorio);
+		void cria_indice();
+		void inicia_BP_atraves_de_arquivo(string diretorio);
 };
 
+/*
+	Encontra a folha correspondente a chave buscada
+	@param raiz ponto incial da busca
+	@param chave valor buscado
+*/
 No* BP::busca_folha(No* const raiz, int chave) {
 	if (raiz == NULL) {
 		printf("Arvore vazia.\n");
@@ -86,6 +89,11 @@ No* BP::busca_folha(No* const raiz, int chave) {
 	return c;
 }
 
+/*
+	Busca uma chave na BP
+	@param raiz ponto incial da busca
+	@param chave valor buscado
+*/
 Endereco* BP::busca(No* raiz, int chave) {
     if (raiz == NULL) {
         return NULL;
@@ -103,19 +111,9 @@ Endereco* BP::busca(No* raiz, int chave) {
 	else
 		return (Endereco*) folha->ponteiros[i];
 }
-
-Endereco* cria_endereco(int value) {
-	Endereco* novo_endereco = (Endereco*)malloc(sizeof(Endereco));
-	if (novo_endereco == NULL) {
-		perror("Erro ao criar ponteiro para endereco.");
-		exit(1);
-	}
-	else {
-		novo_endereco->value = value;
-	}
-	return novo_endereco;
-}
-
+/*
+	Cria novo no e o retorna
+*/
 No* BP::cria_no(void) {
 	No* novo_no;
 	novo_no = (No*) malloc(sizeof(No));
@@ -135,17 +133,24 @@ No* BP::cria_no(void) {
 	}
 	novo_no->folha = false;
 	novo_no->num_chaves = 0;
-	novo_no->parente = NULL;
+	novo_no->pai = NULL;
 	novo_no->prox = NULL;
 	return novo_no;
 }
-
+/*
+	Cria novo no folha e o retorna
+*/
 No* BP::cria_folha(void) {
 	No* folha = cria_no();
 	folha->folha = true;
 	return folha;
 }
-
+/*
+	Insere na folha
+	@param folha folha onde o novo elemento será inserido
+	@param chave valor que será inserido
+	@param ponteiro endereco no arquivo de dados
+*/
 No* BP::insere_na_folha(No* folha, int chave, Endereco* ponteiro) {
 
 	int i, ponto_insersao;
@@ -164,6 +169,13 @@ No* BP::insere_na_folha(No* folha, int chave, Endereco* ponteiro) {
 	return folha;
 }
 
+/*
+	Faz split na folha cheia, insere no novo no folha e o retorna
+	@param raiz ponto de pardida da insercao
+	@param folha endereco da folha que está cheia
+	@param chave valor que será inserido
+	@param ponteiro endereco no arquivo de dados
+*/
 No* BP::insere_no_folha_apos_split(No* raiz, No* folha, int chave, Endereco* ponteiro) {
 
 	No* nova_folha;
@@ -200,7 +212,7 @@ No* BP::insere_no_folha_apos_split(No* raiz, No* folha, int chave, Endereco* pon
 
 	folha->num_chaves = 0;
 
-	split = cut(ordem - 1);
+	split = split_carga(ordem - 1);
 
 	for (i = 0; i < split; i++) {
 		folha->ponteiros[i] = temp_ponteiros[i];
@@ -228,16 +240,22 @@ No* BP::insere_no_folha_apos_split(No* raiz, No* folha, int chave, Endereco* pon
 	for (i = nova_folha->num_chaves; i < ordem - 1; i++)
 		nova_folha->ponteiros[i] = NULL;
 
-	nova_folha->parente = folha->parente;
+	nova_folha->pai = folha->pai;
 	nova_chave = nova_folha->chaves[0];
 
-	return insere_no_parente(raiz, folha, nova_chave, nova_folha);
+	return insere_no_pai(raiz, folha, nova_chave, nova_folha);
 }
 
+/*
+	Insere no nó sem precisar fazer split ou balanceamento
+	@param n no atual
+	@param indice_esquerdo posicao referente ao indice esquerdo
+	@param chave valor a ser inserido
+	@param direita o no mais a direita do no atual
+*/
 No* BP::insere_no_no(No* raiz, No* n, int indice_esquerdo, int chave, No* direita) {
-	int i;
 
-	for (i = n->num_chaves; i > indice_esquerdo; i--) {
+	for (int i = n->num_chaves; i > indice_esquerdo; i--) {
 		n->ponteiros[i + 1] = n->ponteiros[i];
 		n->chaves[i] = n->chaves[i - 1];
 	}
@@ -247,6 +265,15 @@ No* BP::insere_no_no(No* raiz, No* n, int indice_esquerdo, int chave, No* direit
 	return raiz;
 }
 
+/*
+	Faz split do nó
+	@param raiz referencia para a raiz
+	@param indice_esquerdo posicao referente ao indice esquerdo
+	@param direita o no mais a direita do no atual
+	@param no_antigo posicao referente ao indice esquerdo
+	@param chave valor a ser inserido
+	@param direita o no mais a direita do no atual
+*/
 No* BP::insere_no_no_apos_split(No* raiz, No* no_antigo, int indice_esquerdo, int chave, No* direita) {
 
 	int i, j, split, k_prime;
@@ -278,7 +305,7 @@ No* BP::insere_no_no_apos_split(No* raiz, No* no_antigo, int indice_esquerdo, in
 	temp_ponteiros[indice_esquerdo + 1] = direita;
 	temp_chaves[indice_esquerdo] = chave;
 
-	split = cut(ordem);
+	split = split_carga(ordem);
 	novo_no = cria_no();
 	no_antigo->num_chaves = 0;
 	for (i = 0; i < split - 1; i++) {
@@ -296,33 +323,45 @@ No* BP::insere_no_no_apos_split(No* raiz, No* no_antigo, int indice_esquerdo, in
 	novo_no->ponteiros[j] = temp_ponteiros[i];
 	free(temp_ponteiros);
 	free(temp_chaves);
-	novo_no->parente = no_antigo->parente;
+	novo_no->pai = no_antigo->pai;
 	for (i = 0; i <= novo_no->num_chaves; i++) {
 		child = (No*) novo_no->ponteiros[i];
-		child->parente = novo_no;
+		child->pai = novo_no;
 	}
 
-	return insere_no_parente(raiz, no_antigo, k_prime, novo_no);
+	return insere_no_pai(raiz, no_antigo, k_prime, novo_no);
 }
-
-No* BP::insere_no_parente(No* raiz, No* esquerda, int chave, No* direita) {
+/*
+	Insere no pai subindo a chave
+	@param raiz referencia para o no raiz
+	@param chave valor a ser inserido
+	@param esquerda o no mais a esquerda do no atual
+	@param direita o no mais a direita do no atual
+*/
+No* BP::insere_no_pai(No* raiz, No* esquerda, int chave, No* direita) {
 
 	int indice_esquerdo;
-	No* parente;
+	No* pai;
 
-	parente = esquerda->parente;
+	pai = esquerda->pai;
 
-	if (parente == NULL)
+	if (pai == NULL)
 		return insere_na_nova_raiz(esquerda, chave, direita);
 
-	indice_esquerdo = obtem_indice_esquerdo(parente, esquerda);
+	indice_esquerdo = obtem_indice_esquerdo(pai, esquerda);
 
-	if (parente->num_chaves < ordem - 1)
-		return insere_no_no(raiz, parente, indice_esquerdo, chave, direita);
+	if (pai->num_chaves < ordem - 1)
+		return insere_no_no(raiz, pai, indice_esquerdo, chave, direita);
 
-	return insere_no_no_apos_split(raiz, parente, indice_esquerdo, chave, direita);
+	return insere_no_no_apos_split(raiz, pai, indice_esquerdo, chave, direita);
 }
 
+/*
+	Insere na nova raiz e a retorna
+	@param chave valor a ser inserido
+	@param esquerda o no mais a esquerda do no atual
+	@param direita o no mais a direita do no atual
+*/
 No* BP::insere_na_nova_raiz(No* esquerda, int chave, No* direita) {
 
 	No* raiz = cria_no();
@@ -330,35 +369,46 @@ No* BP::insere_na_nova_raiz(No* esquerda, int chave, No* direita) {
 	raiz->ponteiros[0] = esquerda;
 	raiz->ponteiros[1] = direita;
 	raiz->num_chaves++;
-	raiz->parente = NULL;
-	esquerda->parente = raiz;
-	direita->parente = raiz;
+	raiz->pai = NULL;
+	esquerda->pai = raiz;
+	direita->pai = raiz;
 	return raiz;
 }
 
+/*
+	Cria nova arvore, insere o elemento e retorna a nova arvore para a raiz
+	@param chave valor a ser inserido
+	@param endereco endereco do bloco
+*/
 No* BP::inicia_nova_arvore(int chave, Endereco* ponteiro) {
 
 	No* raiz = cria_folha();
 	raiz->chaves[0] = chave;
 	raiz->ponteiros[0] = ponteiro;
 	raiz->ponteiros[ordem - 1] = NULL;
-	raiz->parente = NULL;
+	raiz->pai = NULL;
 	raiz->num_chaves++;
 	return raiz;
 }
 
-No* BP::insere(No* raiz, int chave, int value) {
+/*
+	Insere na BP e atualiza a RAIZ
+	@param raiz referencia para o no raiz
+	@param chave valor a ser inserido
+	@param valor endereco do bloco
+*/
+No* BP::insere(No* raiz, int chave, int valor) {
 
 	Endereco* endereco = NULL;
 	No* folha = NULL;
 
 	endereco = busca(raiz, chave);
     if (endereco != NULL) {
-        endereco->value = value;
+        endereco->valor = valor;
         return raiz;
     }
 
-	endereco = cria_endereco(value);
+	endereco = cria_endereco(valor);
 
 	if (raiz == NULL) 
 		return inicia_nova_arvore(chave, endereco);
@@ -373,13 +423,25 @@ No* BP::insere(No* raiz, int chave, int value) {
 	return insere_no_folha_apos_split(raiz, folha, chave, endereco);
 }
 
-void BP::cria_indice(int chave){
-	No* folha = busca_folha(ROOT,chave);
+/*
+	Gera indice primário procurando o menor valor na arvore e encontrando sua folha.
+*/
+void BP::cria_indice(){
+	No* No_menor = RAIZ;
+	No* folha;
+	int menor = No_menor->chaves[0];
+	while(!No_menor->folha){
+		menor = No_menor->chaves[0];
+		No_menor = (No*) No_menor->ponteiros[0];
+	}
+
+	if(No_menor->folha) folha = (No*) No_menor;
+
 	ofstream output ("indice.dat", ios::out | ios::binary);
 	while(folha){
 		for(int i=0;i<folha->num_chaves;i++){
 			output.write(reinterpret_cast<char *>(&folha->chaves[i]), sizeof(int));
-			output.write(reinterpret_cast<char *>(&((Endereco*) folha->ponteiros[i])->value), sizeof(int));
+			output.write(reinterpret_cast<char *>(&((Endereco*) folha->ponteiros[i])->valor), sizeof(int));
 			output.flush();
 		}
 		folha = folha->prox;
@@ -387,7 +449,11 @@ void BP::cria_indice(int chave){
 	printf(" - Arquivo de indice criado.\n");
 }
 
-void BP::inicia_BP_atravez_de_arquivo(string diretorio){
+/*
+	Inicia uma nova BP apartir do arquivo indice.dat
+	@param diretorio diretorio do arquivo indice.dat
+*/
+void BP::inicia_BP_atraves_de_arquivo(string diretorio){
 	BP* bp = new BP(4);
 	if(!bp){
 		perror("Erro ao criar BP.");
@@ -402,6 +468,6 @@ void BP::inicia_BP_atravez_de_arquivo(string diretorio){
 	while (!input.eof()) {
 		input.read(reinterpret_cast<char *>(&chave), sizeof(int));
 		input.read(reinterpret_cast<char *>(&endereco), sizeof(int));
-		ROOT = bp->insere(ROOT, chave, endereco);
+		RAIZ = bp->insere(RAIZ, chave, endereco);
 	}
 }

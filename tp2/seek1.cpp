@@ -12,16 +12,16 @@ int main( ){
 	int id, ano, citacoes, size=0, chave = 9397, ocupacao, chave_no_arquivo, tamanho_hash, tamanho_map;
 
 	BP* bp = new BP(4);
-	bp->inicia_BP_atravez_de_arquivo(string("indice.dat"));
+	bp->inicia_BP_atraves_de_arquivo(string("indice.dat"));
 	ifstream input("dados.dat", ios::in | ios::binary);
 	input.read(reinterpret_cast<char *>(&tamanho_hash), sizeof(int));
 	tamanho_map = (tamanho_hash*(sizeof(int)*2))+sizeof(int);
 
 	printf("Digite um ID para busca-lo no indice: ");
 	while (scanf("%d", &chave) != EOF) {
-		Endereco* endereco = bp->busca(bp->ROOT,chave);
+		Endereco* endereco = bp->busca(bp->RAIZ,chave);
 		if(endereco){
-			input.seekg(endereco->value+tamanho_map);
+			input.seekg(endereco->valor+tamanho_map);
 			//Le posicao na hash e ocupacao do bloco
             input.read(reinterpret_cast<char *>(&chave_no_arquivo), sizeof(int));
             input.read(reinterpret_cast<char *>(&ocupacao), sizeof(int));

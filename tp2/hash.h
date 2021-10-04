@@ -156,7 +156,7 @@ void Hash::gera_arquivos(){
                     output.write(Elem->Snipet.c_str(), size);
                     
                     output.flush(); 
-                    bp->ROOT = bp->insere(bp->ROOT,Elem->ID,posicao);
+                    bp->RAIZ = bp->insere(bp->RAIZ,Elem->ID,posicao);
 
                 }    
                 bloco = bloco->prox;
@@ -173,5 +173,5 @@ void Hash::gera_arquivos(){
     system("cat map.dat blocos.dat > dados.dat");
     system("rm map.dat blocos.dat");
     printf(" - Arquivo de dados criado.\n");
-    bp->cria_indice(1);
+    bp->cria_indice();
 }
